@@ -30,6 +30,10 @@ import re
 import signal
 import socket
 
+from fsq_modules.database import databaseClass
+
+
+
 # Used for bound_interface
 socket_socket = socket.socket
 
@@ -466,6 +470,8 @@ def speedtest():
                         help='Show the version number and exit')
 
     options = parser.parse_args()
+    db_server = options.server
+        
     if isinstance(options, tuple):
         args = options[0]
     else:
@@ -515,7 +521,8 @@ def speedtest():
 
     if not args.simple:
         print_('Testing from %(isp)s (%(ip)s)...' % config['client'])
-
+    db_ip =  '%(ip)s' % config['client']
+    
     if args.server:
         try:
             best = getBestServer(filter(lambda x: x['id'] == args.server,
@@ -571,6 +578,7 @@ def speedtest():
             print_('Hosted by %(sponsor)s (%(name)s) [%(d)0.2f km]: '
                    '%(latency)s ms' % best)
     else:
+        db_ping = '%(latency)s' % best
         print_('Ping: %(latency)s ms' % best)
 
     sizes = [350, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000]
@@ -585,6 +593,7 @@ def speedtest():
     if not args.simple:
         print_()
     print_('Download: %0.2f Mbit/s' % ((dlspeed / 1000 / 1000) * 8))
+    db_download = ((dlspeed / 1000 / 1000) * 8)
 
     sizesizes = [int(.25 * 1000 * 1000), int(.5 * 1000 * 1000)]
     sizes = []
@@ -597,6 +606,7 @@ def speedtest():
     if not args.simple:
         print_()
     print_('Upload: %0.2f Mbit/s' % ((ulspeed / 1000 / 1000) * 8))
+    db_upload = '%0.2f' % ((ulspeed / 1000 / 1000) * 8)
 
     if args.share and args.mini:
         print_('Cannot generate a speedtest.net share results image while '
@@ -643,6 +653,10 @@ def speedtest():
         print_('Share results: http://www.speedtest.net/result/%s.png' %
                resultid[0])
 
+    # SAVE TO DATABASE
+    db = databaseClass('mysql','baligena.com')
+    db.set_log_write(False)
+    db.insert('speedtest', server_id=db_server, ping=db_ping, download=db_download, upload=db_upload, ip=db_ip)
 
 def main():
     try:
